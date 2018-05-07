@@ -1,5 +1,9 @@
 setwd("~/R_projektit/Iris")
 library(ggvis)
+library(class)
+library(gmodels)
+library(caret)
+library(e1071)
 iris <- read.csv("~/R_projektit/Iris/iris.data", header=FALSE)
 names(iris) <- c("Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width", "Species")
 
@@ -47,4 +51,87 @@ summary(iris)
 
 # Refined summary overview
 summary(iris[c("Petal.Width", "Sepal.Width")])
+set.seed(1234)
+ind <- sample(2, nrow(iris), replace=TRUE, prob=c(0.67, 0.33))
+# Compose training set
+iris.training <- iris[ind==1, 1:4]
+
+# Inspect training set
+head(iris.training)
+
+# Compose test set
+iris.test <- iris[ind==2, 1:4]
+
+# Inspect test set
+head(iris.test)
+# Compose `iris` training labels
+iris.trainLabels <- iris[ind==1,5]
+
+# Inspect result
+print(iris.trainLabels)
+
+# Compose `iris` test labels
+iris.testLabels <- iris[ind==2, 5]
+
+# Inspect result
+print(iris.testLabels)
+
+# Build the model
+iris_pred <- knn(train = iris.training, test = iris.test, cl = iris.trainLabels, k=3)
+
+# Inspect `iris_pred`
+iris_pred
+
+# Put `iris.testLabels` in a data frame
+irisTestLabels <- data.frame(iris.testLabels)
+
+# Merge `iris_pred` and `iris.testLabels` 
+merge <- data.frame(iris_pred, iris.testLabels)
+
+# Specify column names for `merge`
+names(merge) <- c("Predicted Species", "Observed Species")
+
+# Inspect `merge` 
+merge
+CrossTable(x = iris.testLabels, y = iris_pred, prop.chisq=FALSE)
+
+# Create index to split based on labels  
+index <- createDataPartition(iris$Species, p=0.75, list=FALSE)
+
+# Subset training set with index
+iris.training <- iris[index,]
+
+# Subset test set with index
+iris.test <- iris[-index,]
+
+# Overview of algos supported by caret
+names(getModelInfo())
+
+# Train a model
+model_knn <- train(iris.training[, 1:4], iris.training[, 5], method='knn')
+
+# Note that making other models is extremely simple when you have gotten this far;
+#You just have to change the method argument, just like in this example:
+
+model_cart <- train(iris.training[, 1:4], iris.training[, 5], method='rpart2')
+
+# Predict the labels of the test set
+predictions<-predict(object=model_knn,iris.test[,1:4])
+
+# Evaluate the predictions
+table(predictions)
+
+# Confusion matrix 
+confusionMatrix(predictions,iris.test[,5])
+
+# Train the model with preprocessing
+model_knn <- train(iris.training[, 1:4], iris.training[, 5], method='knn', preProcess=c("center", "scale"))
+
+# Predict values
+predictions<-predict.train(object=model_knn,iris.test[,1:4], type="raw")
+
+# Confusion matrix
+confusionMatrix(predictions,iris.test[,5])
+
+  ########## https://www.datacamp.com/community/tutorials/machine-learning-in-r ################
 
